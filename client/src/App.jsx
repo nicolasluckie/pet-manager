@@ -13,6 +13,8 @@ import Dashboard from './pages/Dashboard.jsx';
 // Route-level code splitting: rarely used / heavy pages load on demand.
 const PetList = lazy(() => import('./pages/PetList.jsx'));
 const PetDetail = lazy(() => import('./pages/PetDetail.jsx'));
+const Wiki = lazy(() => import('./pages/Wiki.jsx'));
+const PublicWiki = lazy(() => import('./pages/PublicWiki.jsx'));
 const Settings = lazy(() => import('./pages/Settings.jsx'));
 const Admin = lazy(() => import('./pages/Admin.jsx'));
 const NotFound = lazy(() => import('./pages/NotFound.jsx'));
@@ -56,6 +58,7 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<Login mode="login" />} />
           <Route path="/register" element={<Login mode="register" />} />
+          <Route path="/wiki/:slug" element={<PublicWiki />} />
           <Route
             element={
               <RequireAuth>
@@ -68,6 +71,7 @@ export default function App() {
             <Route path="pets/:id" element={<PetDetail />} />
             <Route path="pets/:id/:tab" element={<PetDetail />} />
             <Route path="pets/:id/:tab/:itemId" element={<PetDetail />} />
+            <Route path="wiki" element={<Wiki />} />
             <Route path="settings" element={<Settings />} />
             <Route
               path="admin"

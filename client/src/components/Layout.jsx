@@ -18,6 +18,7 @@ import { useTheme } from '@mui/material/styles';
 import MenuIcon from '@mui/icons-material/Menu';
 import DashboardOutlinedIcon from '@mui/icons-material/DashboardOutlined';
 import PetsIcon from '@mui/icons-material/Pets';
+import MenuBookOutlinedIcon from '@mui/icons-material/MenuBookOutlined';
 import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
 import AdminPanelSettingsOutlinedIcon from '@mui/icons-material/AdminPanelSettingsOutlined';
 import LogoutIcon from '@mui/icons-material/Logout';
@@ -43,6 +44,7 @@ export default function Layout() {
   const nav = [
     { to: '/', label: t('nav.dashboard'), icon: <DashboardOutlinedIcon />, end: true },
     { to: '/pets', label: t('nav.pets'), icon: <PetsIcon /> },
+    { to: '/wiki', label: t('nav.wiki'), icon: <MenuBookOutlinedIcon /> },
     { to: '/settings', label: t('nav.settings'), icon: <SettingsOutlinedIcon /> },
     ...(isAdmin
       ? [{ to: '/admin', label: t('nav.admin'), icon: <AdminPanelSettingsOutlinedIcon /> }]

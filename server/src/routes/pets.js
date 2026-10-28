@@ -7,6 +7,7 @@ import { ApiError } from '../lib/errors.js';
 import { parse, idParam } from '../lib/validate.js';
 import { detectImageType, removeUpload } from '../lib/image.js';
 import { petSchema } from './schemas.js';
+import { galleryFiles } from './wiki.js';
 
 export function petsRouter({ pool, config }) {
   const router = Router();
@@ -59,12 +60,14 @@ export function petsRouter({ pool, config }) {
 
   router.delete('/:id', async (req, res) => {
     const id = parse(idParam, req.params.id);
+    const gallery = await galleryFiles(pool, id);
     const { rows } = await pool.query(
       'DELETE FROM pets WHERE id = $1 AND household_id = $2 RETURNING photo',
       [id, req.user.household_id],
     );
     if (!rows[0]) throw new ApiError(404, 'PET_NOT_FOUND', 'pet not found');
     await removePhoto(rows[0].photo);
+    await Promise.all(gallery.map(removePhoto));
     res.status(204).end();
   });
 

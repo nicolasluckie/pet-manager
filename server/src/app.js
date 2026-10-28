@@ -15,6 +15,7 @@ import { illnessesRouter } from './routes/illnesses.js';
 import { adminRouter } from './routes/admin.js';
 import { householdRouter } from './routes/household.js';
 import { catalogRouter } from './routes/catalog.js';
+import { petWikiRouter, publicWikiRouter } from './routes/wiki.js';
 import { dashboardRouter } from './routes/dashboard.js';
 import {
   healthSchema,
@@ -80,6 +81,8 @@ export function createApp({ config, pool, settings = createSettingsStore(pool), 
   });
 
   app.use('/api/auth', authRouter(deps));
+  // Published pet wiki pages are public (NFC/QR code for finders).
+  app.use('/api/public/wiki', publicWikiRouter(deps));
 
   // Everything below requires a login unless anonymous mode is active.
   const data = express.Router();
@@ -129,6 +132,7 @@ export function createApp({ config, pool, settings = createSettingsStore(pool), 
     }),
   );
   data.use('/pets/:petId/illnesses', illnessesRouter(deps));
+  data.use('/pets/:petId/wiki', petWikiRouter(deps));
   app.use('/api', data);
 
   // The own household (members, invites, notifications) needs a real login.
