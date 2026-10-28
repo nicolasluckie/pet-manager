@@ -6,6 +6,8 @@ export const SETTING_DEFAULTS = {
   allowRegistration: false,
   // Household that anonymous visitors see when the login requirement is off.
   anonymousHouseholdId: null,
+  // File name (upload dir) of the custom website icon; null = built-in icon.
+  siteIcon: null,
 };
 
 export function createSettingsStore(pool) {

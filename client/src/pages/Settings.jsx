@@ -15,11 +15,12 @@ import Section from '../components/Section.jsx';
 import ThemePicker from '../components/ThemePicker.jsx';
 import LanguagePicker from '../components/LanguagePicker.jsx';
 import HouseholdSection from './settings/HouseholdSection.jsx';
+import SiteIconSection from './settings/SiteIconSection.jsx';
 import NotificationsSection from './settings/NotificationsSection.jsx';
 
 export default function Settings() {
   const { t } = useTranslation();
-  const { user, refresh } = useAuth();
+  const { user, isAdmin, refresh } = useAuth();
   const errorMessage = useErrorMessage();
   const [name, setName] = useState(user?.display_name ?? '');
   const [pw, setPw] = useState({ current_password: '', new_password: '' });
@@ -45,6 +46,7 @@ export default function Settings() {
         <Section title={t('settings.language')} description={t('settings.languageHint')}>
           <LanguagePicker />
         </Section>
+        {isAdmin && <SiteIconSection />}
         {msg && <Alert severity={msg.severity}>{msg.text}</Alert>}
         {user && !user.anonymous && (
           <>

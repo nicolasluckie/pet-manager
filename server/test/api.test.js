@@ -307,3 +307,62 @@ describe('security headers', () => {
     expect(bad.body.error.code).toBe('INVALID_JSON');
   });
 });
+
+describe('website icon', () => {
+  const PNG_ICON = Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    Buffer.alloc(32),
+  ]);
+  let userToken;
+
+  it('is empty by default and visible in the public status', async () => {
+    const res = await api().get('/api/auth/status');
+    expect(res.body.siteIcon).toBeNull();
+  });
+
+  it('can only be changed by admins', async () => {
+    await api()
+      .post('/api/auth/register')
+      .send({
+        email: 'plain@example.com',
+        password: PASSWORD,
+        display_name: 'P',
+        invite_code: (await api().post('/api/household/invite').set(auth(adminToken))).body
+          .invite_code,
+      })
+      .expect(201)
+      .then((r) => (userToken = r.body.token));
+    await api()
+      .post('/api/admin/site-icon')
+      .set(auth(userToken))
+      .attach('photo', PNG_ICON, 'i.png')
+      .expect(403);
+    await api().delete('/api/admin/site-icon').set(auth(userToken)).expect(403);
+    await api().post('/api/admin/site-icon').attach('photo', PNG_ICON, 'i.png').expect(401);
+  });
+
+  it('uploads, replaces and resets the icon', async () => {
+    const up = await api()
+      .post('/api/admin/site-icon')
+      .set(auth(adminToken))
+      .attach('photo', PNG_ICON, 'i.png')
+      .expect(201);
+    expect((await api().get('/api/auth/status')).body.siteIcon).toBe(up.body.siteIcon);
+    const again = await api()
+      .post('/api/admin/site-icon')
+      .set(auth(adminToken))
+      .attach('photo', PNG_ICON, 'i.png')
+      .expect(201);
+    expect(again.body.siteIcon).not.toBe(up.body.siteIcon);
+    await api().get(`/uploads/${again.body.siteIcon}`).expect(200);
+    await api().get(`/uploads/${up.body.siteIcon}`).expect(404);
+    await api()
+      .post('/api/admin/site-icon')
+      .set(auth(adminToken))
+      .attach('photo', Buffer.from('<svg onload=alert(1)></svg> padding'), 'i.svg')
+      .expect(415);
+    const reset = await api().delete('/api/admin/site-icon').set(auth(adminToken)).expect(200);
+    expect(reset.body.siteIcon).toBeNull();
+    await api().get(`/uploads/${again.body.siteIcon}`).expect(404);
+  });
+});

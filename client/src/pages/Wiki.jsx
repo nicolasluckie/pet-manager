@@ -141,13 +141,13 @@ function WikiForm({ petId, wiki }) {
       t('common.saved'),
     );
 
-  const upload = (e) => {
+  const upload = (e, target = 'gallery') => {
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
     const body = new FormData();
     body.append('photo', file);
-    run(() => api(`/pets/${petId}/wiki/gallery`, { method: 'POST', body }));
+    run(() => api(`/pets/${petId}/wiki/${target}`, { method: 'POST', body }));
   };
 
   const publicUrl = `${window.location.origin}/wiki/${slug}`;
@@ -179,6 +179,47 @@ function WikiForm({ petId, wiki }) {
             }}
             sx={{ maxWidth: 420 }}
           />
+          <FormControlLabel
+            control={
+              <Switch
+                checked={content.titleFromName}
+                onChange={(e) => setContent({ ...content, titleFromName: e.target.checked })}
+              />
+            }
+            label={t('wiki.titleFromName')}
+          />
+          <Typography variant="body2" color="textSecondary" sx={{ mt: -1.5 }}>
+            {t('wiki.titleFromNameHint')}
+          </Typography>
+          <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap" useFlexGap>
+            {wiki.icon && (
+              <Box
+                component="img"
+                src={photoUrl(wiki.icon)}
+                alt={t('wiki.icon.title')}
+                sx={{ width: 40, height: 40, objectFit: 'contain', borderRadius: 1 }}
+              />
+            )}
+            <Button component="label" variant="outlined">
+              {t('wiki.icon.upload')}
+              <input
+                hidden
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                onChange={(e) => upload(e, 'icon')}
+              />
+            </Button>
+            {wiki.icon && (
+              <Button
+                onClick={() => run(() => api(`/pets/${petId}/wiki/icon`, { method: 'DELETE' }))}
+              >
+                {t('wiki.icon.remove')}
+              </Button>
+            )}
+            <Typography variant="body2" color="textSecondary">
+              {t('wiki.icon.hint')}
+            </Typography>
+          </Stack>
           {wiki.published && (
             <Typography variant="body2">
               <Link href={`/wiki/${wiki.slug}`} target="_blank" rel="noreferrer">

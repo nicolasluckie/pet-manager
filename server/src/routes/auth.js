@@ -67,6 +67,7 @@ export function authRouter({ pool, config, settings, auth }) {
       registrationOpen: await registrationOpen(),
       anonymousMode: await isAnonymousModeActive(config, settings),
       anonymousModeAllowed: config.allowAnonymousMode,
+      siteIcon: await settings.get('siteIcon'),
     });
   });
 

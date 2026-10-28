@@ -323,7 +323,15 @@
     "passwordChanged": "Passwort geändert.",
     "about": "Über",
     "license": "Open Source unter der MIT-Lizenz",
-    "sourceCode": "Quellcode"
+    "sourceCode": "Quellcode",
+    "siteIcon": {
+      "title": "Website-Symbol",
+      "hint": "Das Symbol im Browser-Tab für die gesamte App. Verwende ein quadratisches Bild (PNG, WebP, JPEG oder GIF).",
+      "current": "Aktuelles Website-Symbol",
+      "default": "Standard-Website-Symbol",
+      "upload": "Symbol hochladen",
+      "reset": "Auf Standard zurücksetzen"
+    }
   },
   "household": {
     "title": "Haushalt",
@@ -549,6 +557,14 @@
       "found": "Wenn du {{name}} gefunden hast, melde dich bitte!",
       "owner": "Besitzer:in",
       "footer": "Diese Seite wurde erstellt, um {{name}} zu seinen Besitzern zurückzubringen, falls das Tier einmal verloren geht."
+    },
+    "titleFromName": "Namen des Tieres als Seitentitel verwenden",
+    "titleFromNameHint": "Wird im Browser-Tab der öffentlichen Seite angezeigt. Wenn deaktiviert, wird der Standardtitel der App verwendet.",
+    "icon": {
+      "title": "Seitensymbol",
+      "upload": "Seitensymbol hochladen",
+      "remove": "Seitensymbol entfernen",
+      "hint": "Optionales Browser-Tab-Symbol für die öffentliche Seite dieses Tieres. Ohne eines wird das Website-Symbol verwendet."
     }
   }
 }

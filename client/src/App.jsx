@@ -1,10 +1,12 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import CircularProgress from '@mui/material/CircularProgress';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from './auth/AuthProvider.jsx';
+import { photoUrl } from './api/client.js';
+import { setFavicon } from './lib/favicon.js';
 import { useErrorMessage } from './lib/useErrorMessage.js';
 import Layout from './components/Layout.jsx';
 import Login from './pages/Login.jsx';
@@ -43,6 +45,8 @@ function RequireAuth({ children, admin = false }) {
 export default function App() {
   const errorMessage = useErrorMessage();
   const auth = useAuth();
+  const siteIcon = auth.status?.siteIcon;
+  useEffect(() => setFavicon(photoUrl(siteIcon) ?? null), [siteIcon]);
   if (auth.loading) return <Loading />;
   if (auth.error && !auth.status) {
     return (

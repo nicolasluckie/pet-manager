@@ -171,10 +171,45 @@ describe('pet wiki access, privacy and cleanup', () => {
     expect(res.body.error.code).toBe('WIKI_IMAGE_NOT_FOUND');
   });
 
+  it('stores a per-pet icon, serves it in the article and replaces/removes it', async () => {
+    const url = `/api/pets/${petId}/wiki/icon`;
+    const first = await api().post(url).set(auth(tokenA)).attach('photo', PNG, 'i.png').expect(201);
+    const icon = first.body.icon;
+    expect(existsSync(path.join(ctx.uploadDir, icon))).toBe(true);
+    expect((await api().get('/api/public/wiki/mochi').expect(200)).body.icon).toBe(icon);
+    const second = await api().post(url).set(auth(tokenA)).attach('photo', PNG, 'i.png');
+    expect(second.body.icon).not.toBe(icon);
+    expect(existsSync(path.join(ctx.uploadDir, icon))).toBe(false);
+    await api()
+      .post(url)
+      .set(auth(tokenA))
+      .attach('photo', Buffer.from('<svg onload=alert(1)/> padding padding'), 'i.svg')
+      .expect(415);
+    await api().post(url).set(auth(tokenB)).attach('photo', PNG, 'i.png').expect(404);
+    const removed = await api().delete(url).set(auth(tokenA)).expect(200);
+    expect(removed.body.icon).toBeNull();
+    expect(existsSync(path.join(ctx.uploadDir, second.body.icon))).toBe(false);
+    expect((await api().get('/api/public/wiki/mochi')).body.icon).toBeNull();
+    await api().post(url).set(auth(tokenA)).attach('photo', PNG, 'i.png').expect(201);
+  });
+
+  it('uses the pet name as page title by default and lets you turn it off', async () => {
+    const wiki = (await api().get(`/api/pets/${petId}/wiki`).set(auth(tokenA))).body;
+    expect(wiki.content.titleFromName).toBe(true);
+    expect((await api().get('/api/public/wiki/mochi')).body.titleFromName).toBe(true);
+    await put(tokenA, petId, {
+      ...wiki,
+      content: { ...wiki.content, titleFromName: false },
+    }).expect(200);
+    expect((await api().get('/api/public/wiki/mochi')).body.titleFromName).toBe(false);
+  });
+
   it('removes the wiki and its uploaded images when the pet is deleted', async () => {
     const wiki = (await api().get(`/api/pets/${petId}/wiki`).set(auth(tokenA))).body;
-    const files = wiki.gallery.map((g) => path.join(ctx.uploadDir, g.file));
-    expect(files).toHaveLength(12);
+    const files = [...wiki.gallery.map((g) => g.file), wiki.icon].map((f) =>
+      path.join(ctx.uploadDir, f),
+    );
+    expect(files).toHaveLength(13);
     expect(files.every((f) => existsSync(f))).toBe(true);
     await api().delete(`/api/pets/${petId}`).set(auth(tokenA)).expect(204);
     expect(files.some((f) => existsSync(f))).toBe(false);

@@ -1,12 +1,10 @@
 import { Router } from 'express';
 import { randomUUID } from 'node:crypto';
-import { writeFile } from 'node:fs/promises';
-import path from 'node:path';
-import multer from 'multer';
 import { z } from 'zod';
 import { ApiError } from '../lib/errors.js';
 import { parse, idParam, requiredText } from '../lib/validate.js';
-import { detectImageType, removeUpload } from '../lib/image.js';
+import { removeUpload } from '../lib/image.js';
+import { singleImageUpload, storeUploadedImage } from '../lib/upload.js';
 
 // Privacy by design: nothing is public unless its `show` flag is true. The
 // microchip number, notes, vet data etc. are never exposed; only the yes/no flag.
@@ -58,6 +56,8 @@ export const wikiContentSchema = z.object({
   homeArea: z.object({ city: text(100), state: text(100), notes: text(1000) }).prefault({}),
   ownerName: text(100),
   contactNote: text(300),
+  // Page (tab) title of the public page: the pet's name, or the app's default title.
+  titleFromName: z.boolean().default(true),
 });
 
 const showSchema = z.object(Object.fromEntries(SHOW_KEYS.map((k) => [k, z.boolean().optional()])));
@@ -92,6 +92,7 @@ const toWiki = (row, pet) => ({
   content: { ...emptyContent(), ...(row?.content ?? {}) },
   show: normalizeShow(row?.show),
   gallery: row?.gallery ?? [],
+  icon: row?.icon ?? null,
 });
 
 /** Builds the public article payload for a pet. Only enabled fields are included. */
@@ -105,6 +106,8 @@ export async function buildArticle(pool, pet, row) {
     facts: {},
     infobox: content.infobox,
     image: null,
+    icon: wiki.icon,
+    titleFromName: content.titleFromName,
     sections: {},
   };
   if (show.species) article.facts.species = pet.species;
@@ -171,10 +174,7 @@ export function publicWikiRouter({ pool }) {
 /** Wiki configuration of a pet (nested below /pets/:petId/wiki). */
 export function petWikiRouter({ pool, config }) {
   const router = Router({ mergeParams: true });
-  const upload = multer({
-    storage: multer.memoryStorage(),
-    limits: { fileSize: config.maxUploadBytes, files: 1, fields: 0 },
-  });
+  const uploadOne = singleImageUpload(config);
 
   async function findPet(req) {
     const id = parse(idParam, req.params.petId);
@@ -220,30 +220,12 @@ export function petWikiRouter({ pool, config }) {
     res.json(toWiki(await loadWikiRow(pool, pet.id), pet));
   });
 
-  const uploadOne = (req, res, next) =>
-    upload.single('photo')(req, res, (err) => {
-      if (err?.code === 'LIMIT_FILE_SIZE') {
-        return next(
-          new ApiError(413, 'UPLOAD_TOO_LARGE', 'File too large', {
-            maxBytes: config.maxUploadBytes,
-          }),
-        );
-      }
-      if (err) return next(new ApiError(400, 'UPLOAD_INVALID', err.message));
-      next();
-    });
-
   router.post('/gallery', uploadOne, async (req, res) => {
     const pet = await findPet(req);
-    if (!req.file) throw new ApiError(400, 'UPLOAD_MISSING', 'No file uploaded');
-    const kind = detectImageType(req.file.buffer);
-    if (!kind)
-      throw new ApiError(415, 'UPLOAD_UNSUPPORTED_TYPE', 'Only JPEG, PNG, WebP and GIF allowed');
     const current = (await loadWikiRow(pool, pet.id))?.gallery ?? [];
     if (current.length >= MAX_GALLERY)
       throw new ApiError(400, 'GALLERY_FULL', 'gallery is full', { max: MAX_GALLERY });
-    const file = `${randomUUID()}.${kind.ext}`;
-    await writeFile(path.join(config.uploadDir, file), req.file.buffer, { mode: 0o640 });
+    const file = await storeUploadedImage(config, req.file);
     const gallery = [...current, { file, caption: '' }];
     await pool.query(
       `INSERT INTO pet_wikis (pet_id, slug, gallery) VALUES ($1, $2, $3)
@@ -280,6 +262,29 @@ export function petWikiRouter({ pool, config }) {
     res.json(toWiki(await loadWikiRow(pool, pet.id), pet));
   });
 
+  router.post('/icon', uploadOne, async (req, res) => {
+    const pet = await findPet(req);
+    const icon = await storeUploadedImage(config, req.file);
+    const previous = (await loadWikiRow(pool, pet.id))?.icon;
+    await pool.query(
+      `INSERT INTO pet_wikis (pet_id, slug, icon) VALUES ($1, $2, $3)
+       ON CONFLICT (pet_id) DO UPDATE SET icon = $3, updated_at = now()`,
+      [pet.id, await freeSlug(pet), icon],
+    );
+    await removeUpload(config.uploadDir, previous);
+    res.status(201).json(toWiki(await loadWikiRow(pool, pet.id), pet));
+  });
+
+  router.delete('/icon', async (req, res) => {
+    const pet = await findPet(req);
+    const row = await loadWikiRow(pool, pet.id);
+    await pool.query('UPDATE pet_wikis SET icon = NULL, updated_at = now() WHERE pet_id = $1', [
+      pet.id,
+    ]);
+    await removeUpload(config.uploadDir, row?.icon);
+    res.json(toWiki(await loadWikiRow(pool, pet.id), pet));
+  });
+
   // Finds an unused slug for rows created implicitly (e.g. by a gallery upload).
   async function freeSlug(pet) {
     const base = slugify(pet);
@@ -294,7 +299,8 @@ export function petWikiRouter({ pool, config }) {
   return router;
 }
 
-/** Gallery file names of a pet, used to clean up uploads when the pet is deleted. */
-export async function galleryFiles(pool, petId) {
-  return ((await loadWikiRow(pool, petId))?.gallery ?? []).map((g) => g.file);
+/** Uploaded file names of a pet's wiki (gallery and icon), to clean up when the pet is deleted. */
+export async function wikiFiles(pool, petId) {
+  const row = await loadWikiRow(pool, petId);
+  return [...(row?.gallery ?? []).map((g) => g.file), ...(row?.icon ? [row.icon] : [])];
 }

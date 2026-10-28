@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { ApiError } from '../lib/errors.js';
 import { parse, idParam } from '../lib/validate.js';
 import { removeUpload } from '../lib/image.js';
+import { singleImageUpload, storeUploadedImage } from '../lib/upload.js';
 import { createHousehold, newInviteCode } from '../services/households.js';
 import { householdName } from './household.js';
 
@@ -26,11 +27,13 @@ export function adminRouter({ pool, config, settings }) {
   const router = Router();
 
   async function publicSettings() {
-    const { requireLogin, allowRegistration, anonymousHouseholdId } = await settings.all();
+    const { requireLogin, allowRegistration, anonymousHouseholdId, siteIcon } =
+      await settings.all();
     return {
       requireLogin,
       allowRegistration,
       anonymousHouseholdId,
+      siteIcon,
       anonymousModeAllowed: config.allowAnonymousMode,
     };
   }
@@ -53,6 +56,23 @@ export function adminRouter({ pool, config, settings }) {
       data.anonymousHouseholdId = req.user.household_id;
     }
     await settings.set(data);
+    res.json(await publicSettings());
+  });
+
+  const uploadIcon = singleImageUpload(config);
+
+  router.post('/site-icon', uploadIcon, async (req, res) => {
+    const icon = await storeUploadedImage(config, req.file);
+    const previous = await settings.get('siteIcon');
+    await settings.set({ siteIcon: icon });
+    await removeUpload(config.uploadDir, previous);
+    res.status(201).json(await publicSettings());
+  });
+
+  router.delete('/site-icon', async (_req, res) => {
+    const previous = await settings.get('siteIcon');
+    await settings.set({ siteIcon: null });
+    await removeUpload(config.uploadDir, previous);
     res.json(await publicSettings());
   });
 

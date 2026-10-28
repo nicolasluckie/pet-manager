@@ -323,7 +323,15 @@
     "passwordChanged": "Password changed.",
     "about": "About",
     "license": "Open source under the MIT License",
-    "sourceCode": "Source code"
+    "sourceCode": "Source code",
+    "siteIcon": {
+      "title": "Website icon",
+      "hint": "The icon shown in the browser tab for the whole app. Use a square image (PNG, WebP, JPEG or GIF).",
+      "current": "Current website icon",
+      "default": "Default website icon",
+      "upload": "Upload icon",
+      "reset": "Reset to default"
+    }
   },
   "household": {
     "title": "Household",
@@ -549,6 +557,14 @@
       "found": "If you found {{name}}, please reach out!",
       "owner": "Owner",
       "footer": "This page was created to help reunite {{name}} with their owner if they ever get lost."
+    },
+    "titleFromName": "Use the pet's name as the page title",
+    "titleFromNameHint": "Shown in the browser tab of the public page. When off, the default app title is used.",
+    "icon": {
+      "title": "Page icon",
+      "upload": "Upload page icon",
+      "remove": "Remove page icon",
+      "hint": "Optional browser tab icon for this pet's public page. Without one, the website icon is used."
     }
   }
 }
