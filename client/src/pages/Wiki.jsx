@@ -34,7 +34,6 @@ const SHOW_GROUPS = [
 ];
 const FAVOURITES = ['toys', 'foods', 'activities', 'sleepingSpots'];
 
-const toLines = (list) => list.join('\n');
 const fromLines = (text) =>
   text
     .split('\n')
@@ -112,9 +111,13 @@ function WikiForm({ petId, wiki }) {
 
   const setNested = (group, key, value) =>
     setContent({ ...content, [group]: { ...content[group], [key]: value } });
-  const nested = (group, key, lines) => ({
-    value: lines ? toLines(content[group][key]) : content[group][key],
-    onChange: (e) => setNested(group, key, lines ? fromLines(e.target.value) : e.target.value),
+  const nested = (group, key) => ({
+    value: content[group][key],
+    onChange: (e) => setNested(group, key, e.target.value),
+  });
+  const lines = (group, key) => ({
+    value: content[group][key],
+    onChange: (list) => setNested(group, key, list),
   });
   const flat = (key) => ({
     value: content[key],
@@ -312,10 +315,10 @@ function WikiForm({ petId, wiki }) {
             {...nested('personality', 'content')}
             {...MULTILINE}
           />
-          <TextField
+          <LinesField
             label={t('wiki.fields.traits')}
             helperText={t('wiki.fields.linesHint')}
-            {...nested('personality', 'traits', true)}
+            {...lines('personality', 'traits')}
             {...MULTILINE}
           />
 
@@ -330,11 +333,11 @@ function WikiForm({ petId, wiki }) {
 
           {heading(t('wiki.show.favourites'))}
           {FAVOURITES.map((key) => (
-            <TextField
+            <LinesField
               key={key}
               label={t(`wiki.article.${key}`)}
               helperText={t('wiki.fields.linesHint')}
-              {...nested('favourites', key, true)}
+              {...lines('favourites', key)}
               multiline
               minRows={2}
             />
@@ -409,6 +412,21 @@ function WikiForm({ petId, wiki }) {
         </QueryState>
       </Section>
     </Stack>
+  );
+}
+
+/** One entry per line. Keeps the raw text while typing; blank lines are dropped in the list. */
+function LinesField({ value, onChange, ...props }) {
+  const [text, setText] = useState(value.join('\n'));
+  return (
+    <TextField
+      {...props}
+      value={text}
+      onChange={(e) => {
+        setText(e.target.value);
+        onChange(fromLines(e.target.value));
+      }}
+    />
   );
 }
 
